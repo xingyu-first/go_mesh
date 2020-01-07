@@ -39,31 +39,31 @@ int main(int argc, char* argv[])
 //  for(vertex_descriptor vd: vertices(mesh)){
 //    std::cout << vnormals[vd] << std::endl;
 //  }
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal> ());
-    int i = 0;
-      for(vertex_descriptor vd: vertices(mesh)){
-         normals->points[i].normal_x = vnormals[vd].hx();
-         normals->points[i].normal_y = vnormals[vd].hy();
-         normals->points[i].normal_z = vnormals[vd].hz();
-      }
-      i = 0;
-  for(vertex_descriptor vd : mesh.vertices()){
-//      cloud(pcl::PointXYZ(mesh.points()[vd].hx(), mesh.points()[vd].hy(), mesh.points()[vd].hz()));
-      cloud->points[i].x = mesh.points()[vd].hx();
-      cloud->points[i].y = mesh.points()[vd].hy();
-      cloud->points[i].z = mesh.points()[vd].hz();
-      i++;
-  }
+//  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+//  pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal> ());
+//    int i = 0;
+//      for(vertex_descriptor vd: vertices(mesh)){
+//         normals->points[i].normal_x = vnormals[vd].hx();
+//         normals->points[i].normal_y = vnormals[vd].hy();
+//         normals->points[i].normal_z = vnormals[vd].hz();
+//      }
+//      i = 0;
+//  for(vertex_descriptor vd : mesh.vertices()){
+////      cloud(pcl::PointXYZ(mesh.points()[vd].hx(), mesh.points()[vd].hy(), mesh.points()[vd].hz()));
+//      cloud->points[i].x = mesh.points()[vd].hx();
+//      cloud->points[i].y = mesh.points()[vd].hy();
+//      cloud->points[i].z = mesh.points()[vd].hz();
+//      i++;
+//  }
 
-  pcl::FPFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfh;
-  fpfh.setInputCloud (cloud);
-  fpfh.setInputNormals (normals);
-  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+//  pcl::FPFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfh;
+//  fpfh.setInputCloud (cloud);
+//  fpfh.setInputNormals (normals);
+//  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
 
-  fpfh.setSearchMethod (tree);
-    pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhs (new pcl::PointCloud<pcl::FPFHSignature33> ());
-    fpfh.setRadiusSearch (0.05);
-  fpfh.compute (*fpfhs);
+//  fpfh.setSearchMethod (tree);
+//    pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhs (new pcl::PointCloud<pcl::FPFHSignature33> ());
+//    fpfh.setRadiusSearch (0.05);
+//  fpfh.compute (*fpfhs);
   return 0;
 }
