@@ -1,69 +1,59 @@
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Surface_mesh.h>
-#include <CGAL/Polygon_mesh_processing/compute_normal.h>
-#include <iostream>
+#include <CGAL/Polygon_mesh_processing/remesh.h>
+#include <CGAL/Polygon_mesh_processing/border.h>
+#include <boost/function_output_iterator.hpp>
 #include <fstream>
-#include <pcl/point_types.h>
-#include <pcl/features/fpfh.h>
-
+#include <vector>
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
-typedef K::Point_3 Point;
-typedef K::Vector_3 Vector;
-typedef CGAL::Surface_mesh<Point> Surface_mesh;
-typedef boost::graph_traits<Surface_mesh>::vertex_descriptor vertex_descriptor;
-typedef boost::graph_traits<Surface_mesh>::face_descriptor   face_descriptor;
+typedef CGAL::Surface_mesh<K::Point_3> Mesh;
+typedef boost::graph_traits<Mesh>::halfedge_descriptor halfedge_descriptor;
+typedef boost::graph_traits<Mesh>::edge_descriptor     edge_descriptor;
+namespace PMP = CGAL::Polygon_mesh_processing;
+struct halfedge2edge
+{
+  halfedge2edge(const Mesh& m, std::vector<edge_descriptor>& edges)
+    : m_mesh(m), m_edges(edges)
+  {}
+  void operator()(const halfedge_descriptor& h) const
+  {
+    m_edges.push_back(edge(h, m_mesh));
+  }
+  const Mesh& m_mesh;
+  std::vector<edge_descriptor>& m_edges;
+};
 int main(int argc, char* argv[])
 {
-  const char* filename = (argc > 1) ? argv[1] : "../../data/chair_0001.off";
-  std::cout << filename<< std::endl;
+  const char* filename = (argc > 1) ? argv[1] : "../../data/toilet_0002.off";
   std::ifstream input(filename);
-  Surface_mesh mesh;
-  if (!input || !(input >> mesh) || mesh.is_empty()) {
-    std::cerr << "Not a valid off file." << std::endl;
+  Mesh mesh;
+  if (!input || !(input >> mesh) || !CGAL::is_triangle_mesh(mesh)) {
+    std::cerr << "Not a valid input file." << std::endl;
     return 1;
   }
-  auto fnormals = mesh.add_property_map<face_descriptor, Vector>
-      ("f:normals", CGAL::NULL_VECTOR).first;
-  auto vnormals = mesh.add_property_map<vertex_descriptor, Vector>
-      ("v:normals", CGAL::NULL_VECTOR).first;
-  CGAL::Polygon_mesh_processing::compute_normals(mesh,
-        vnormals,
-        fnormals,
-        CGAL::Polygon_mesh_processing::parameters::vertex_point_map(mesh.points()).
-        geom_traits(K()));
-//  std::cout << "Face normals :" << std::endl;
-//  for(face_descriptor fd: faces(mesh)){
-//    std::cout << fnormals[fd] << std::endl;
-//  }
-//  std::cout << "Vertex normals :" << std::endl;
-//  for(vertex_descriptor vd: vertices(mesh)){
-//    std::cout << vnormals[vd] << std::endl;
-//  }
-//  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
-//  pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal> ());
-//    int i = 0;
-//      for(vertex_descriptor vd: vertices(mesh)){
-//         normals->points[i].normal_x = vnormals[vd].hx();
-//         normals->points[i].normal_y = vnormals[vd].hy();
-//         normals->points[i].normal_z = vnormals[vd].hz();
-//      }
-//      i = 0;
-//  for(vertex_descriptor vd : mesh.vertices()){
-////      cloud(pcl::PointXYZ(mesh.points()[vd].hx(), mesh.points()[vd].hy(), mesh.points()[vd].hz()));
-//      cloud->points[i].x = mesh.points()[vd].hx();
-//      cloud->points[i].y = mesh.points()[vd].hy();
-//      cloud->points[i].z = mesh.points()[vd].hz();
-//      i++;
-//  }
+  double target_edge_length = 0.04;
+  unsigned int nb_iter = 3;
+  std::cout << "Split border...";
+    std::vector<edge_descriptor> border;
+    PMP::border_halfedges(faces(mesh),
+      mesh,
+      boost::make_function_output_iterator(halfedge2edge(mesh, border)));
+    PMP::split_long_edges(border, target_edge_length, mesh);
+  std::cout << "done." << std::endl;
+  std::cout << "Start remeshing of " << filename
+    << " (" << num_faces(mesh) << " faces)..." << std::endl;
+  PMP::isotropic_remeshing(
+      faces(mesh),
+      target_edge_length,
+      mesh,
+      PMP::parameters::number_of_iterations(nb_iter)
+      .protect_constraints(true)//i.e. protect border, here
+      );
+  std::cout << "Remeshing done." << std::endl;
+  std::ofstream faired_off("../../test.off");
 
-//  pcl::FPFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfh;
-//  fpfh.setInputCloud (cloud);
-//  fpfh.setInputNormals (normals);
-//  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+  faired_off << mesh;
+  faired_off.close();
 
-//  fpfh.setSearchMethod (tree);
-//    pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhs (new pcl::PointCloud<pcl::FPFHSignature33> ());
-//    fpfh.setRadiusSearch (0.05);
-//  fpfh.compute (*fpfhs);
   return 0;
 }
